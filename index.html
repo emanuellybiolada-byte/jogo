@@ -1,0 +1,2198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Block Puzzle Colorido</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: linear-gradient(135deg, #0a0a2e, #1a1a4e);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: white;
+      overflow: hidden;
+      user-select: none;
+    }
+    h1 {
+      margin-bottom: 8px;
+      font-size: 1.8rem;
+      text-shadow: 0 0 15px rgba(255,255,255,0.3);
+    }
+
+    /* ===== CAPA DO JOGO ===== */
+    #cover {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at 50% 30%, #1a1a5e 0%, #0a0a2e 60%, #050515 100%);
+      transition: opacity 0.6s, visibility 0.6s, transform 0.6s;
+      overflow: hidden;
+    }
+    #cover.hide {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: scale(1.15);
+    }
+    #cover-particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .cover-particle {
+      position: absolute;
+      border-radius: 6px;
+      opacity: 0.7;
+      animation: floatParticle linear infinite;
+    }
+    @keyframes floatParticle {
+      0% { transform: translateY(110vh) rotate(0deg) scale(0.6); opacity: 0; }
+      10% { opacity: 0.8; }
+      90% { opacity: 0.6; }
+      100% { transform: translateY(-10vh) rotate(360deg) scale(1); opacity: 0; }
+    }
+    #cover .logo {
+      font-size: 3.4rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #ffeb3b, #ff9800, #f44336, #e040fb, #448aff);
+      background-size: 300% 300%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 4px 24px rgba(255,150,0,0.6));
+      margin-bottom: 8px;
+      letter-spacing: 3px;
+      animation: logoIn 1s cubic-bezier(0.34, 1.56, 0.64, 1) both, logoShine 4s ease infinite;
+      position: relative;
+      z-index: 2;
+    }
+    @keyframes logoIn {
+      0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    @keyframes logoShine {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    #cover .subtitle {
+      font-size: 1.15rem;
+      color: #90caf9;
+      margin-bottom: 40px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 0.4s forwards;
+      position: relative;
+      z-index: 2;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 0.95; transform: translateY(0); }
+    }
+    #cover .blocks-deco {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 40px;
+      position: relative;
+      z-index: 2;
+    }
+    #cover .blocks-deco span {
+      width: 40px;
+      height: 40px;
+      border-radius: 9px;
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.35), 0 4px 14px rgba(0,0,0,0.45);
+      animation: blockBounce 1.2s ease infinite;
+      opacity: 0;
+      animation-fill-mode: both;
+    }
+    #cover .blocks-deco span:nth-child(1) { animation-delay: 0.5s; }
+    #cover .blocks-deco span:nth-child(2) { animation-delay: 0.6s; }
+    #cover .blocks-deco span:nth-child(3) { animation-delay: 0.7s; }
+    #cover .blocks-deco span:nth-child(4) { animation-delay: 0.8s; }
+    #cover .blocks-deco span:nth-child(5) { animation-delay: 0.9s; }
+    #cover .blocks-deco span:nth-child(6) { animation-delay: 1.0s; }
+    @keyframes blockBounce {
+      0% { opacity: 0; transform: translateY(40px) scale(0); }
+      40% { opacity: 1; transform: translateY(-12px) scale(1.15); }
+      60% { transform: translateY(0) scale(0.95); }
+      80% { transform: translateY(-6px) scale(1.05); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    #cover .blocks-deco span.loop {
+      animation: blockFloat 2s ease-in-out infinite;
+    }
+    @keyframes blockFloat {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-10px) rotate(5deg); }
+    }
+    #cover .btn-play {
+      padding: 18px 60px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 40px;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      color: #111;
+      cursor: pointer;
+      box-shadow: 0 6px 30px rgba(0,200,255,0.5);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      z-index: 2;
+      opacity: 0;
+      animation: btnIn 0.7s ease 1.2s forwards, btnPulse 2s ease 2s infinite;
+    }
+    @keyframes btnIn {
+      from { opacity: 0; transform: scale(0.5); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes btnPulse {
+      0%, 100% { box-shadow: 0 6px 30px rgba(0,200,255,0.5); transform: scale(1); }
+      50% { box-shadow: 0 8px 40px rgba(0,200,255,0.8); transform: scale(1.04); }
+    }
+    #cover .btn-play:hover {
+      transform: scale(1.12) !important;
+      box-shadow: 0 10px 45px rgba(0,200,255,0.9) !important;
+      animation: none;
+    }
+    #cover .tiger-mascot {
+      font-size: 4rem;
+      margin-bottom: 12px;
+      position: relative;
+      z-index: 2;
+      animation: tigerWave 1.5s ease infinite, mascotIn 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;
+      filter: drop-shadow(0 4px 16px rgba(255,140,0,0.5));
+    }
+    @keyframes tigerWave {
+      0%, 100% { transform: rotate(-8deg) scale(1); }
+      50% { transform: rotate(8deg) scale(1.1); }
+    }
+    @keyframes mascotIn {
+      from { transform: scale(0) translateY(-40px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    #game-ui { display: none; }
+    #game-ui.show { display: flex; flex-direction: column; align-items: center; }
+
+    /* ===== TUTORIAL (demo jogando - animado) ===== */
+    #tutorial {
+      position: fixed;
+      inset: 0;
+      z-index: 350;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at 50% 30%, #1a1a5e 0%, #0a0a2e 50%, #050515 100%);
+      overflow: hidden;
+    }
+    #tutorial.show { display: flex; }
+    #tutorial .tut-label {
+      font-size: 1.4rem;
+      color: #ffd700;
+      font-weight: bold;
+      margin-bottom: 18px;
+      min-height: 34px;
+      text-align: center;
+      text-shadow: 0 0 20px rgba(255,215,0,0.5);
+      animation: labelPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes labelPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.06); opacity: 0.9; }
+    }
+    #tut-demo {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+      position: relative;
+      animation: demoZoomIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes demoZoomIn {
+      from { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+      to { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    #tut-board {
+      display: grid;
+      grid-template-columns: repeat(6, 40px);
+      grid-template-rows: repeat(6, 40px);
+      gap: 3px;
+      background: #0d0d2b;
+      padding: 8px;
+      border-radius: 14px;
+      box-shadow: 0 0 40px rgba(0,150,255,0.25), 0 8px 30px rgba(0,0,0,0.6);
+      position: relative;
+      transition: transform 0.15s;
+    }
+    #tut-board.shake {
+      animation: boardShake 0.4s ease;
+    }
+    @keyframes boardShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px) rotate(-1deg); }
+      40% { transform: translateX(6px) rotate(1deg); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    .tut-cell {
+      width: 40px; height: 40px;
+      background: #1a1a3a;
+      border-radius: 7px;
+      transition: background 0.2s, transform 0.25s, opacity 0.25s, box-shadow 0.25s;
+    }
+    .tut-cell.filled {
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.3);
+      animation: cellPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes cellPop {
+      0% { transform: scale(0); opacity: 0; }
+      60% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .tut-cell.clearing { animation: shine 0.55s ease-out forwards; }
+    .tut-cell.yellow { background: linear-gradient(145deg,#ffeb3b,#fbc02d); }
+    .tut-cell.red { background: linear-gradient(145deg,#ff5252,#d32f2f); }
+    .tut-cell.blue { background: linear-gradient(145deg,#448aff,#1565c0); }
+    .tut-cell.green { background: linear-gradient(145deg,#69f0ae,#00c853); }
+    .tut-cell.orange { background: linear-gradient(145deg,#ffab40,#f57c00); }
+    .tut-cell.purple { background: linear-gradient(145deg,#e040fb,#9c27b0); }
+    #tut-hand {
+      position: absolute;
+      font-size: 2.2rem;
+      pointer-events: none;
+      z-index: 15;
+      transition: left 0.35s cubic-bezier(0.34, 1.4, 0.64, 1), top 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+      filter: drop-shadow(0 3px 8px rgba(0,0,0,0.6));
+    }
+    #tut-hand.click {
+      animation: handClick 0.3s ease;
+    }
+    @keyframes handClick {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(0.75); }
+    }
+    #tut-pieces { display: flex; flex-direction: column; gap: 12px; }
+    .tut-piece {
+      background: #12122e;
+      border-radius: 12px;
+      padding: 10px;
+      border: 2px solid transparent;
+      transition: border-color 0.25s, transform 0.3s, box-shadow 0.3s;
+    }
+    .tut-piece.selected {
+      border-color: #ffd700;
+      transform: scale(1.15);
+      box-shadow: 0 0 18px rgba(255,215,0,0.5);
+      animation: pieceGlow 0.6s ease infinite alternate;
+    }
+    @keyframes pieceGlow {
+      from { box-shadow: 0 0 12px rgba(255,215,0,0.4); }
+      to { box-shadow: 0 0 22px rgba(255,215,0,0.7); }
+    }
+    .tut-piece .tp { display: grid; gap: 2px; }
+    .tut-piece .tp div { width: 22px; height: 22px; border-radius: 5px; }
+    .tut-piece .tp .yellow { background: linear-gradient(145deg,#ffeb3b,#fbc02d); }
+    .tut-piece .tp .blue { background: linear-gradient(145deg,#448aff,#1565c0); }
+    .tut-piece .tp .red { background: linear-gradient(145deg,#ff5252,#d32f2f); }
+    .tut-piece .tp .green { background: linear-gradient(145deg,#69f0ae,#00c853); }
+    #tutorial .tut-skip {
+      position: absolute;
+      top: 24px; right: 24px;
+      padding: 10px 22px;
+      border: 2px solid #fff;
+      border-radius: 25px;
+      background: rgba(0,0,0,0.45);
+      color: white;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      z-index: 20;
+      transition: transform 0.2s, background 0.2s;
+    }
+    #tutorial .tut-skip:hover { background: rgba(255,255,255,0.25); transform: scale(1.08); }
+    #tutorial .tut-bar {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #4facfe, #00f2fe, #69f0ae);
+      width: 0%;
+      box-shadow: 0 0 10px rgba(0,200,255,0.6);
+    }
+    #tut-bat {
+      font-size: 4.5rem;
+      opacity: 0;
+      position: absolute;
+      left: 50%; top: 35%;
+      transform: translate(-50%, -50%) scale(0) rotate(-30deg);
+      pointer-events: none;
+      z-index: 16;
+      filter: drop-shadow(0 0 25px rgba(255,140,0,0.7));
+    }
+    #tut-bat.show {
+      animation: tigerEntrance 1.8s ease forwards;
+    }
+    @keyframes tigerEntrance {
+      0% { opacity: 0; transform: translate(-50%, -30%) scale(0) rotate(-25deg); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.5) rotate(12deg); }
+      40% { transform: translate(-50%, -48%) scale(1.15) rotate(-10deg); }
+      55% { transform: translate(-50%, -52%) scale(1.35) rotate(6deg); }
+      70% { opacity: 1; transform: translate(-50%, -50%) scale(1.2) rotate(0); }
+      100% { opacity: 0; transform: translate(-50%, -75%) scale(0.5) rotate(18deg); }
+    }
+    #tut-score-pop {
+      position: absolute;
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #00e676;
+      text-shadow: 0 0 15px rgba(0,230,118,0.8);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 17;
+    }
+    #tut-score-pop.show {
+      animation: scoreFly 1.2s ease forwards;
+    }
+    @keyframes scoreFly {
+      0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+      30% { opacity: 1; transform: translate(-50%, -20px) scale(1.3); }
+      100% { opacity: 0; transform: translate(-50%, -60px) scale(1); }
+    }
+    .tut-spark {
+      position: absolute;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 14;
+      animation: sparkFly 0.7s ease-out forwards;
+    }
+    @keyframes sparkFly {
+      0% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: translate(var(--sx), var(--sy)) scale(0); }
+    }
+    #info {
+      display: flex;
+      gap: 28px;
+      margin-bottom: 12px;
+      font-size: 1.25rem;
+      align-items: center;
+    }
+    #score { color: #ffd700; }
+    #level { color: #00e676; font-weight: bold; }
+    #round { color: #82b1ff; font-weight: bold; }
+    #coins { color: #ffd54f; font-weight: bold; }
+    #next { color: #ce93d8; font-size: 0.95rem; }
+    #shop-btn, #roulette-btn {
+      font-size: 1.6rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+    }
+    #shop-btn:hover { transform: scale(1.25) rotate(-8deg); }
+    #roulette-btn:hover { transform: scale(1.25) rotate(20deg); }
+
+    /* BOA! bem grande em vermelho */
+    #boa-flash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 250;
+      pointer-events: none;
+      opacity: 0;
+    }
+    #boa-flash.show {
+      animation: boaFlash 1.1s ease forwards;
+    }
+    #boa-flash span {
+      font-size: 5.5rem;
+      font-weight: 900;
+      color: #ff1744;
+      text-shadow:
+        0 0 20px rgba(255,23,68,0.9),
+        0 0 40px rgba(255,23,68,0.6),
+        3px 3px 0 #000;
+      letter-spacing: 6px;
+    }
+    @keyframes boaFlash {
+      0% { opacity: 0; transform: scale(0.3); }
+      25% { opacity: 1; transform: scale(1.25); }
+      50% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.1); }
+    }
+
+    /* ===== ROLETA ===== */
+    #roulette-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,20,0.88);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 210;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    #roulette-modal.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #roulette-box {
+      background: linear-gradient(145deg, #1a1a4e, #0d0d2b);
+      border-radius: 20px;
+      padding: 28px 32px;
+      text-align: center;
+      border: 2px solid #ffd700;
+      box-shadow: 0 0 40px rgba(255,215,0,0.3);
+      max-width: 360px;
+      width: 92%;
+    }
+    #roulette-box h2 {
+      color: #ffd700;
+      margin-bottom: 8px;
+    }
+    #roulette-box .r-info {
+      color: #aaa;
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+    }
+    #roulette-wheel-wrap {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      margin: 0 auto 18px;
+    }
+    #roulette-pointer {
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.6rem;
+      z-index: 2;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    }
+    #roulette-wheel {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      border: 4px solid #ffd700;
+      background: conic-gradient(
+        #e53935 0deg 45deg,
+        #43a047 45deg 90deg,
+        #1e88e5 90deg 135deg,
+        #fdd835 135deg 180deg,
+        #8e24aa 180deg 225deg,
+        #fb8c00 225deg 270deg,
+        #00acc1 270deg 315deg,
+        #ec407a 315deg 360deg
+      );
+      transition: transform 4s cubic-bezier(0.15, 0.85, 0.25, 1);
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.4), 0 0 25px rgba(255,215,0,0.3);
+      position: relative;
+    }
+    .roulette-label {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 30px; height: 30px;
+      margin: -15px;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 1;
+    }
+    #roulette-wheel::after {
+      content: '🪙';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 48px; height: 48px;
+      background: #1a1a4e;
+      border-radius: 50%;
+      border: 3px solid #ffd700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      line-height: 48px;
+      text-align: center;
+      z-index: 2;
+    }
+    #roulette-result {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #00e676;
+      min-height: 32px;
+      margin-bottom: 12px;
+    }
+    #roulette-spin-btn {
+      padding: 12px 36px;
+      border: none;
+      border-radius: 30px;
+      background: linear-gradient(135deg, #ffd700, #ff9800);
+      color: #111;
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    #roulette-spin-btn:disabled {
+      background: #555;
+      color: #999;
+      cursor: default;
+    }
+    #roulette-close {
+      display: block;
+      margin: 8px auto 0;
+      padding: 8px 24px;
+      border: none;
+      border-radius: 20px;
+      background: #ff5252;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* ===== LOJA ===== */
+    #shop-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,20,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    #shop-modal.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #shop-box {
+      background: linear-gradient(145deg, #1a1a4e, #0d0d2b);
+      border-radius: 20px;
+      padding: 28px 32px;
+      max-width: 520px;
+      width: 92%;
+      max-height: 80vh;
+      overflow-y: auto;
+      border: 2px solid #ffd700;
+      box-shadow: 0 0 40px rgba(255,215,0,0.25);
+    }
+    #shop-box h2 {
+      text-align: center;
+      color: #ffd700;
+      margin-bottom: 6px;
+      font-size: 1.6rem;
+    }
+    #shop-box .shop-coins {
+      text-align: center;
+      color: #ffd54f;
+      margin-bottom: 18px;
+      font-size: 1.1rem;
+    }
+    .shop-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #12122e;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      border: 2px solid transparent;
+      transition: border-color 0.2s;
+    }
+    .shop-item:hover { border-color: #555; }
+    .shop-item.owned { border-color: #00e676; }
+    .shop-item.active { border-color: #ffd700; box-shadow: 0 0 12px rgba(255,215,0,0.3); }
+    .shop-preview {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.25), inset 0 -2px 4px rgba(0,0,0,0.3);
+    }
+    .shop-info { flex: 1; }
+    .shop-info .name { font-weight: bold; font-size: 1.05rem; }
+    .shop-info .desc { font-size: 0.85rem; color: #aaa; margin-top: 2px; }
+    .shop-buy {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.9rem;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      color: #111;
+      white-space: nowrap;
+    }
+    .shop-buy:disabled {
+      background: #333;
+      color: #888;
+      cursor: default;
+    }
+    .shop-buy.owned-btn {
+      background: #00e676;
+      color: #111;
+    }
+    .shop-close {
+      display: block;
+      margin: 16px auto 0;
+      padding: 10px 28px;
+      background: #ff5252;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    #game-container {
+      display: flex;
+      gap: 30px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      justify-content: center;
+      position: relative;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(8, 50px);
+      grid-template-rows: repeat(8, 50px);
+      gap: 3px;
+      background: #0d0d2b;
+      padding: 8px;
+      border-radius: 16px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.6), 0 0 60px rgba(100,100,255,0.08);
+      position: relative;
+      transition: box-shadow 0.3s;
+    }
+    #board.clear-shake {
+      animation: boardShake 0.4s ease;
+    }
+    .cell {
+      width: 50px;
+      height: 50px;
+      background: #1a1a3a;
+      border-radius: 8px;
+      transition: background 0.15s, transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .cell.filled {
+      border-radius: 8px;
+      box-shadow: inset 0 3px 6px rgba(255,255,255,0.25),
+                  inset 0 -3px 6px rgba(0,0,0,0.3);
+      position: relative;
+      animation: cellLand 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes cellLand {
+      0% { transform: scale(0) rotate(-8deg); opacity: 0; }
+      60% { transform: scale(1.15) rotate(3deg); }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    /* Brilho ao limpar */
+    .cell.clearing {
+      animation: shine 0.55s ease-out forwards;
+      z-index: 10;
+    }
+    @keyframes shine {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255,255,255,0.9);
+        filter: brightness(1);
+      }
+      40% {
+        transform: scale(1.35);
+        box-shadow: 0 0 30px 10px rgba(255,255,180,0.95);
+        filter: brightness(2.5);
+      }
+      100% {
+        transform: scale(0.2);
+        opacity: 0;
+        box-shadow: 0 0 50px 20px rgba(255,255,100,0);
+        filter: brightness(3);
+      }
+    }
+    #pieces {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-width: 180px;
+    }
+    .piece-slot {
+      background: #12122e;
+      border-radius: 14px;
+      padding: 12px;
+      min-height: 110px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      border: 2px solid transparent;
+      transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+    }
+    .piece-slot:hover { border-color: #555; transform: scale(1.06); }
+    .piece-slot.selected {
+      border-color: #ffd700;
+      box-shadow: 0 0 18px rgba(255,215,0,0.55);
+      transform: scale(1.1);
+      animation: selectedPulse 0.8s ease infinite alternate;
+    }
+    @keyframes selectedPulse {
+      from { box-shadow: 0 0 12px rgba(255,215,0,0.4); }
+      to { box-shadow: 0 0 24px rgba(255,215,0,0.7); }
+    }
+    .piece {
+      display: grid;
+      gap: 3px;
+    }
+    .block {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.3),
+                  inset 0 -2px 4px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+    }
+    .piece-slot:hover .block { transform: scale(1.05); }
+    #message {
+      margin-top: 16px;
+      font-size: 1.4rem;
+      height: 36px;
+      font-weight: bold;
+      text-align: center;
+      transition: all 0.3s;
+    }
+    #message.good {
+      color: #00e676;
+      text-shadow: 0 0 12px rgba(0,230,118,0.7);
+      animation: pop 0.5s ease;
+    }
+    #message.levelup {
+      color: #ffd700;
+      font-size: 1.6rem;
+      text-shadow: 0 0 20px rgba(255,215,0,0.8);
+      animation: pop 0.7s ease;
+    }
+    #message.bad {
+      color: #ff6b6b;
+    }
+    @keyframes pop {
+      0% { transform: scale(0.5); opacity: 0; }
+      60% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ===== MONSTRINHO ===== */
+    #monster {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      z-index: 50;
+      text-align: center;
+      pointer-events: none;
+      opacity: 0;
+    }
+    #monster.show {
+      animation: tigerRoar 2.2s ease-out forwards;
+    }
+    @keyframes tigerRoar {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -30%) scale(0) rotate(-20deg);
+      }
+      12% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.5) rotate(12deg);
+      }
+      25% {
+        transform: translate(-50%, -48%) scale(1.15) rotate(-10deg);
+      }
+      38% {
+        transform: translate(-50%, -52%) scale(1.35) rotate(8deg);
+      }
+      50% {
+        transform: translate(-50%, -50%) scale(1.2) rotate(-4deg);
+      }
+      65% {
+        transform: translate(-50%, -50%) scale(1.25) rotate(0deg);
+      }
+      80% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2) rotate(0deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -70%) scale(0.5) rotate(15deg);
+      }
+    }
+    #monster .face {
+      font-size: 100px;
+      line-height: 1;
+      filter: drop-shadow(0 6px 20px rgba(255,140,0,0.5));
+      animation: tigerShake 0.4s ease 0.15s 3;
+    }
+    @keyframes tigerShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px) rotate(-5deg); }
+      75% { transform: translateX(6px) rotate(5deg); }
+    }
+    #monster .speech {
+      background: #fff;
+      color: #111;
+      font-size: 1.5rem;
+      font-weight: 800;
+      padding: 10px 22px;
+      border-radius: 24px;
+      margin-top: 8px;
+      display: inline-block;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+      position: relative;
+      white-space: nowrap;
+    }
+    #monster .speech::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-top: 12px solid #fff;
+    }
+    /* Overlay de fase */
+    #level-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,20,0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+    #level-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #level-overlay .box {
+      background: linear-gradient(145deg, #1a1a4e, #0d0d2b);
+      padding: 40px 60px;
+      border-radius: 24px;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(0,230,118,0.4);
+      border: 2px solid #00e676;
+      transform: scale(0.7);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    #level-overlay.show .box {
+      transform: scale(1);
+    }
+    #level-overlay h2 {
+      font-size: 2.4rem;
+      color: #ffd700;
+      margin-bottom: 10px;
+    }
+    #level-overlay p {
+      font-size: 1.2rem;
+      color: #aaa;
+    }
+    button {
+      margin-top: 14px;
+      padding: 12px 28px;
+      font-size: 1.1rem;
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      border: none;
+      border-radius: 30px;
+      color: #111;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: transform 0.15s;
+    }
+    button:hover { transform: scale(1.05); }
+    .yellow { background: linear-gradient(145deg, #ffeb3b, #fbc02d); }
+    .red    { background: linear-gradient(145deg, #ff5252, #d32f2f); }
+    .blue   { background: linear-gradient(145deg, #448aff, #1565c0); }
+    .green  { background: linear-gradient(145deg, #69f0ae, #00c853); }
+    .purple { background: linear-gradient(145deg, #e040fb, #9c27b0); }
+    .orange { background: linear-gradient(145deg, #ffab40, #f57c00); }
+
+    /* ===== TEMAS DE BLOCOS ===== */
+    /* Madeira */
+    .theme-wood .yellow, .theme-wood .red, .theme-wood .blue,
+    .theme-wood .green, .theme-wood .purple, .theme-wood .orange,
+    .theme-wood .block {
+      background: linear-gradient(145deg, #d4a574, #8b5e3c) !important;
+      box-shadow: inset 0 2px 0 #e8c9a0, inset 0 -3px 0 #6b4423 !important;
+    }
+    /* Diamante */
+    .theme-diamond .yellow, .theme-diamond .red, .theme-diamond .blue,
+    .theme-diamond .green, .theme-diamond .purple, .theme-diamond .orange,
+    .theme-diamond .block {
+      background: linear-gradient(135deg, #e0f7fa, #4dd0e1, #00bcd4) !important;
+      box-shadow: inset 0 2px 6px rgba(255,255,255,0.7), 0 0 8px rgba(0,200,255,0.5) !important;
+    }
+    /* Preto */
+    .theme-black .yellow, .theme-black .red, .theme-black .blue,
+    .theme-black .green, .theme-black .purple, .theme-black .orange,
+    .theme-black .block {
+      background: linear-gradient(145deg, #333, #111) !important;
+      box-shadow: inset 0 1px 0 #555, 0 0 6px rgba(255,255,255,0.15) !important;
+      border: 1px solid #444;
+    }
+    /* Brilhante */
+    .theme-shiny .yellow, .theme-shiny .red, .theme-shiny .blue,
+    .theme-shiny .green, .theme-shiny .purple, .theme-shiny .orange,
+    .theme-shiny .block {
+      background: linear-gradient(135deg, #fff9c4, #ffeb3b, #fbc02d) !important;
+      box-shadow: inset 0 3px 8px rgba(255,255,255,0.9), 0 0 12px rgba(255,235,59,0.6) !important;
+    }
+    /* Carinha — rostinhos fofinhos desenhados (sem emoji de monstro) */
+    .theme-face .yellow, .theme-face .red, .theme-face .blue,
+    .theme-face .green, .theme-face .purple, .theme-face .orange,
+    .theme-face .block {
+      background: linear-gradient(160deg, #fff9c4, #ffecb3) !important;
+      box-shadow: inset 0 2px 5px rgba(255,255,255,0.6), inset 0 -2px 4px rgba(0,0,0,0.1) !important;
+      border-radius: 14px !important;
+      border: 2px solid #ffe082 !important;
+    }
+    /* olhinhos */
+    .theme-face .cell.filled::before,
+    .theme-face .block::before {
+      content: '';
+      position: absolute;
+      top: 32%;
+      left: 50%;
+      width: 14px;
+      height: 5px;
+      transform: translateX(-50%);
+      background:
+        radial-gradient(circle at 25% 50%, #5d4037 2.2px, transparent 2.3px),
+        radial-gradient(circle at 75% 50%, #5d4037 2.2px, transparent 2.3px);
+      pointer-events: none;
+      z-index: 2;
+    }
+    /* sorrisinho */
+    .theme-face .cell.filled::after,
+    .theme-face .block::after {
+      content: '';
+      position: absolute;
+      bottom: 28%;
+      left: 50%;
+      width: 10px;
+      height: 5px;
+      transform: translateX(-50%);
+      border: 2px solid #5d4037;
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .theme-face .block { position: relative; overflow: hidden; }
+    .theme-face .cell.filled { position: relative; overflow: hidden; }
+    /* Slime pegajoso brilhante (estilo sticky frames) */
+    .theme-slime .yellow, .theme-slime .red, .theme-slime .blue,
+    .theme-slime .green, .theme-slime .purple, .theme-slime .orange,
+    .theme-slime .block {
+      background:
+        radial-gradient(ellipse 60% 40% at 28% 22%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.15) 45%, transparent 70%),
+        radial-gradient(ellipse 30% 25% at 70% 75%, rgba(255,255,255,0.2) 0%, transparent 60%),
+        linear-gradient(160deg, #c6ff6a 0%, #8efc3a 25%, #5ee010 55%, #3db50a 85%, #2a8a08 100%) !important;
+      box-shadow:
+        inset 0 3px 6px rgba(255,255,255,0.55),
+        inset 0 -5px 12px rgba(20,80,0,0.35),
+        0 3px 10px rgba(80,180,20,0.45),
+        0 0 0 2px rgba(60,140,20,0.5) !important;
+      border-radius: 12px !important;
+      border: 3px solid rgba(180,255,100,0.7) !important;
+      position: relative !important;
+      overflow: visible !important;
+      animation: slimeShine 3s ease-in-out infinite;
+    }
+    .theme-slime .cell.filled,
+    .theme-slime .block {
+      position: relative !important;
+      overflow: visible !important;
+    }
+    /* gotículas de slime */
+    .theme-slime .cell.filled::before,
+    .theme-slime .block::before {
+      content: '';
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      width: 7px;
+      height: 9px;
+      background: radial-gradient(circle at 40% 35%, #e8ffb0, #7ae02a 70%);
+      border-radius: 50%;
+      box-shadow:
+        -18px 22px 0 -1px #6fd820,
+        4px 28px 0 -2px #8aee40,
+        -8px 32px 0 -1px #5bc418;
+      opacity: 0.9;
+      pointer-events: none;
+      z-index: 4;
+      animation: slimeDrop 2.4s ease-in-out infinite;
+    }
+    /* borda inferior derretendo */
+    .theme-slime .cell.filled::after,
+    .theme-slime .block::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 18%;
+      width: 64%;
+      height: 10px;
+      background: linear-gradient(180deg, #6fd820 0%, #4cb010 100%);
+      border-radius: 0 0 60% 60% / 0 0 100% 100%;
+      opacity: 0.85;
+      pointer-events: none;
+      z-index: 3;
+      box-shadow:
+        6px 2px 0 -1px #7ae02a,
+        22px 1px 0 -2px #5bc418,
+        -4px 3px 0 -1px #8aee40;
+      animation: slimeMelt 2.8s ease-in-out infinite;
+    }
+    @keyframes slimeShine {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.08); }
+    }
+    @keyframes slimeDrop {
+      0%, 100% { transform: translateY(0); opacity: 0.9; }
+      50% { transform: translateY(3px); opacity: 1; }
+    }
+    @keyframes slimeMelt {
+      0%, 100% { transform: scaleY(1) scaleX(1); }
+      50% { transform: scaleY(1.2) scaleX(1.05); }
+    }
+  </style>
+</head>
+<body>
+  <!-- ===== CAPA ===== -->
+  <div id="cover">
+    <div id="cover-particles"></div>
+    <div class="tiger-mascot">🐯</div>
+    <div class="logo">BLOCK PUZZLE</div>
+    <div class="subtitle">Colorido • Fases • Loja • Roleta</div>
+    <div class="blocks-deco" id="cover-blocks">
+      <span style="background:linear-gradient(145deg,#ffeb3b,#fbc02d)"></span>
+      <span style="background:linear-gradient(145deg,#ff5252,#d32f2f)"></span>
+      <span style="background:linear-gradient(145deg,#448aff,#1565c0)"></span>
+      <span style="background:linear-gradient(145deg,#69f0ae,#00c853)"></span>
+      <span style="background:linear-gradient(145deg,#e040fb,#9c27b0)"></span>
+      <span style="background:linear-gradient(145deg,#ffab40,#f57c00)"></span>
+    </div>
+    <button class="btn-play" onclick="startTutorial()">▶ Jogar</button>
+  </div>
+
+  <!-- ===== TUTORIAL (demo jogando) ===== -->
+  <div id="tutorial">
+    <button class="tut-skip" onclick="skipTutorial()">Pular ▶</button>
+    <div class="tut-label" id="tut-label">Alguém está jogando...</div>
+    <div id="tut-demo">
+      <div id="tut-board"></div>
+      <div id="tut-pieces"></div>
+      <div id="tut-hand">👆</div>
+      <div id="tut-bat">🐯</div>
+      <div id="tut-score-pop">+50</div>
+    </div>
+    <div class="tut-bar" id="tut-bar"></div>
+  </div>
+
+  <!-- ===== JOGO ===== -->
+  <div id="game-ui">
+  <h1 id="game-title">Block Puzzle Colorido</h1>
+  <div id="info">
+    <div id="level">Fase: 1</div>
+    <div id="round">Rodada: 1/3</div>
+    <div id="score">Pontos: 0</div>
+    <div id="coins">🪙 0</div>
+    <div id="next">Rodada: 0/40</div>
+    <div id="roulette-btn" onclick="openRoulette()" title="Roleta da Sorte">🎰</div>
+    <div id="shop-btn" onclick="openShop()" title="Loja de Blocos">🛒</div>
+  </div>
+
+  <div id="game-container">
+    <div id="board"></div>
+    <div id="pieces"></div>
+  </div>
+
+  <div id="message"></div>
+  <button onclick="backToCover()">Menu</button>
+  </div>
+
+  <!-- Monstrinho que grita -->
+  <div id="monster">
+    <div class="face">🐯</div>
+    <div class="speech">Boa jogada!</div>
+  </div>
+
+  <!-- LOJA -->
+  <div id="shop-modal">
+    <div id="shop-box">
+      <h2>🛒 Loja de Blocos</h2>
+      <div class="shop-coins" id="shop-coins-display">Suas moedas: 🪙 0</div>
+      <div id="shop-items"></div>
+      <button class="shop-close" onclick="closeShop()">Fechar</button>
+    </div>
+  </div>
+
+  <!-- Overlay de nova fase -->
+  <div id="level-overlay">
+    <div class="box">
+      <h2 id="overlay-title">Fase 2!</h2>
+      <p id="overlay-text">Ficou mais difícil...</p>
+    </div>
+  </div>
+
+  <!-- BOA! grande em vermelho -->
+  <div id="boa-flash"><span>BOA!</span></div>
+
+  <!-- ROLETA -->
+  <div id="roulette-modal">
+    <div id="roulette-box">
+      <h2>🎰 Roleta da Sorte</h2>
+      <div class="r-info">Gire e ganhe moedas! Custa 🪙 5</div>
+      <div id="roulette-wheel-wrap">
+        <div id="roulette-pointer">▼</div>
+        <div id="roulette-wheel"></div>
+      </div>
+      <div id="roulette-result"></div>
+      <button id="roulette-spin-btn" onclick="spinRoulette()">Girar!</button>
+      <button id="roulette-close" onclick="closeRoulette()">Fechar</button>
+    </div>
+  </div>
+
+  <script>
+    const SIZE = 8;
+    let board = Array(SIZE).fill().map(() => Array(SIZE).fill(null));
+    let score = 0;
+    let coins = 0;
+    let level = 1;
+    let round = 1;
+    let roundScore = 0;
+    let selectedPiece = null;
+    let selectedIndex = -1;
+    let isAnimating = false;
+    let currentTheme = 'normal';
+    
+
+    const THEMES = [
+      { id: 'normal',  name: 'Normal',     desc: 'Blocos coloridos clássicos', price: 0,   preview: '🌈' },
+      { id: 'wood',    name: 'Madeira',    desc: 'Blocos de madeira rústica',  price: 50,  preview: '🪵' },
+      { id: 'diamond', name: 'Diamante',   desc: 'Cristais brilhantes azuis',  price: 120, preview: '💎' },
+      { id: 'black',   name: 'Preto',      desc: 'Blocos escuros elegantes',   price: 80,  preview: '⬛' },
+      { id: 'shiny',   name: 'Brilhante',  desc: 'Dourados e reluzentes',      price: 150, preview: '✨' },
+      { id: 'face',    name: 'Carinha',    desc: 'Blocos com rostinho feliz',  price: 100, preview: '😊' },
+      { id: 'slime',   name: 'Slime',      desc: 'Gosma verde derretida',     price: 200, preview: '🟢' }
+    ];
+
+    let ownedThemes = ['normal'];
+
+    const COLORS = ['yellow', 'red', 'blue', 'green', 'purple', 'orange'];
+
+    const GOOD_MSGS = ['Boa!', 'Ótimo!', 'Incrível!', 'Show!', 'Perfeito!', 'Mandou bem!', 'Excelente!'];
+
+    // ===== PEÇAS POR DIFICULDADE =====
+    const EASY_SHAPES = [
+      [[1]], [[1,1]], [[1,1,1]],
+      [[1,1],[1,1]],
+      [[1,0],[1,1]], [[1,1],[0,1]],
+      [[1,0],[1,0],[1,1]], [[0,1],[0,1],[1,1]]
+    ];
+
+    const NORMAL_SHAPES = [
+      [[1,1],[1,1]],
+      [[1,0],[1,0],[1,1]], [[0,1],[0,1],[1,1]],
+      [[1,1,1],[0,1,0]],
+      [[0,1,1],[1,1,0]], [[1,1,0],[0,1,1]],
+      [[1,1,1]], [[1,1,1,1]],
+      [[1,1],[0,1],[0,1]], [[1,0],[1,1],[0,1]],
+      [[1,1,1],[1,0,0]], [[1,1,1],[0,0,1]],
+      [[1,1],[1,0]], [[1,1],[0,1]]
+    ];
+
+    const HARD_SHAPES = [
+      [[1,1,1,1]], [[1,1,1,1,1]],
+      [[1,0,0],[1,0,0],[1,1,1]],
+      [[0,0,1],[0,0,1],[1,1,1]],
+      [[1,1,1],[0,1,0],[0,1,0]],
+      [[1,1,0],[0,1,0],[0,1,1]],
+      [[0,1,1],[0,1,0],[1,1,0]],
+      [[1,1,1],[1,0,1]], [[1,0,1],[1,1,1]],
+      [[1,1],[1,0],[1,0]], [[1,1],[0,1],[0,1]],
+      [[1,1,1,1],[0,0,0,1]],
+      [[1,0,0,0],[1,1,1,1]],
+      [[1,1,1],[0,1,0],[1,0,0]],
+      [[0,0,1],[0,1,0],[1,1,1]]
+    ];
+
+    // Peças MUITO difíceis (fases altas)
+    const EXPERT_SHAPES = [
+      [[1,1,1,1,1]], [[1,1,1,1,1,1]],
+      [[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,1,1,1]],
+      [[0,0,0,1],[0,0,0,1],[0,0,0,1],[1,1,1,1]],
+      [[1,1,1],[0,1,0],[0,1,0],[0,1,0]],
+      [[1,0,1],[1,0,1],[1,1,1]],
+      [[1,1,1],[1,0,1],[1,0,1]],
+      [[1,1,0,0],[0,1,1,0],[0,0,1,1]],
+      [[0,0,1,1],[0,1,1,0],[1,1,0,0]],
+      [[1,1,1,1],[1,0,0,0],[1,0,0,0]],
+      [[1,1,1,1],[0,0,0,1],[0,0,0,1]],
+      [[1,0,0],[1,1,0],[0,1,1],[0,0,1]],
+      [[0,0,1],[0,1,1],[1,1,0],[1,0,0]],
+      [[1,1,1,0],[0,0,1,0],[0,0,1,1]],
+      [[0,1,1,1],[0,1,0,0],[1,1,0,0]]
+    ];
+
+    function getShapesForLevel() {
+      // Dificuldade sobe MUITO rápido
+      if (level === 1) return [...EASY_SHAPES, ...NORMAL_SHAPES]; // já mistura
+      if (level === 2) return [...NORMAL_SHAPES, ...HARD_SHAPES];  // já tem difíceis
+      if (level === 3) return HARD_SHAPES;                         // só difíceis
+      if (level <= 5) return [...HARD_SHAPES, ...EXPERT_SHAPES];   // expert entra cedo
+      // Fase 6+ : só as mais difíceis (expert)
+      return EXPERT_SHAPES;
+    }
+
+    // Pontos necessários para terminar a rodada atual
+    function pointsForNextRound() {
+      // Cada rodada pede um pouco mais, e fases altas pedem ainda mais
+      return 30 + (level * 15) + (round * 10) + (level * round * 5);
+    }
+
+    function createBoard() {
+      const boardEl = document.getElementById('board');
+      boardEl.innerHTML = '';
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.addEventListener('click', () => tryPlace(r, c));
+          cell.addEventListener('mouseenter', () => preview(r, c));
+          cell.addEventListener('mouseleave', clearPreview);
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    function drawBoard() {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach(cell => {
+        const r = +cell.dataset.row;
+        const c = +cell.dataset.col;
+        cell.className = 'cell';
+        cell.style.background = '';
+        cell.style.opacity = '';
+        cell.style.transform = '';
+        cell.style.filter = '';
+        if (board[r][c]) {
+          cell.classList.add('filled', board[r][c]);
+        }
+      });
+    }
+
+    function randomPiece() {
+      const shapes = getShapesForLevel();
+      const shape = shapes[Math.floor(Math.random() * shapes.length)];
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      return { shape, color };
+    }
+
+    function renderPieces() {
+      const piecesEl = document.getElementById('pieces');
+      piecesEl.innerHTML = '';
+      currentPieces.forEach((piece, idx) => {
+        const slot = document.createElement('div');
+        slot.className = 'piece-slot' + (selectedIndex === idx ? ' selected' : '');
+        slot.onclick = () => selectPiece(idx);
+
+        if (!piece) {
+          slot.style.opacity = '0.3';
+          piecesEl.appendChild(slot);
+          return;
+        }
+
+        const pieceDiv = document.createElement('div');
+        pieceDiv.className = 'piece';
+        pieceDiv.style.gridTemplateColumns = `repeat(${piece.shape[0].length}, 36px)`;
+
+        piece.shape.forEach(row => {
+          row.forEach(val => {
+            const block = document.createElement('div');
+            if (val) {
+              block.className = `block ${piece.color}`;
+            } else {
+              block.style.width = '36px';
+              block.style.height = '36px';
+            }
+            pieceDiv.appendChild(block);
+          });
+        });
+        slot.appendChild(pieceDiv);
+        piecesEl.appendChild(slot);
+      });
+    }
+
+    let currentPieces = [randomPiece(), randomPiece(), randomPiece()];
+
+    function selectPiece(idx) {
+      if (isAnimating || !currentPieces[idx]) return;
+      selectedIndex = idx;
+      selectedPiece = currentPieces[idx];
+      renderPieces();
+      clearPreview();
+      const msg = document.getElementById('message');
+      if (!msg.classList.contains('levelup') && !msg.classList.contains('good')) {
+        msg.textContent = '';
+        msg.className = '';
+      }
+    }
+
+    function canPlace(shape, row, col) {
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[0].length; c++) {
+          if (shape[r][c]) {
+            const nr = row + r;
+            const nc = col + c;
+            if (nr >= SIZE || nc >= SIZE || nr < 0 || nc < 0 || board[nr][nc]) {
+              return false;
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    function place(shape, color, row, col) {
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[0].length; c++) {
+          if (shape[r][c]) {
+            board[row + r][col + c] = color;
+          }
+        }
+      }
+    }
+
+    function playClearSound() {}
+
+    function showBoaFlash(cleared) {
+      const flash = document.getElementById('boa-flash');
+      const span = flash.querySelector('span');
+      if (cleared >= 3) span.textContent = 'INCRÍVEL!';
+      else if (cleared === 2) span.textContent = 'MUITO BOA!';
+      else span.textContent = 'BOA!';
+      flash.classList.remove('show');
+      void flash.offsetWidth;
+      flash.classList.add('show');
+      setTimeout(() => flash.classList.remove('show'), 1100);
+    }
+
+    function showGoodMessage(cleared) {
+      const msg = document.getElementById('message');
+      let text = GOOD_MSGS[Math.floor(Math.random() * GOOD_MSGS.length)];
+      if (cleared >= 3) text = 'INCRÍVEL!!!';
+      else if (cleared === 2) text = 'Muito bom!';
+      msg.textContent = text;
+      msg.className = 'good';
+      setTimeout(() => {
+        if (msg.className === 'good') {
+          msg.textContent = '';
+          msg.className = '';
+        }
+      }, 1200);
+
+      playClearSound();
+      showBoaFlash(cleared);
+      showMonster(cleared);
+    }
+
+    function playPopSound() {}
+    function speak(text) {}
+    function playPlaceSound() {}
+    function playLevelUpSound() {}
+    function playGameOverSound() {}
+
+    function showMonster(cleared) {
+      const monster = document.getElementById('monster');
+      const face = monster.querySelector('.face');
+      const speech = monster.querySelector('.speech');
+
+      // Sempre tigre!
+      face.textContent = '🐯';
+
+      let text = 'Boa jogada!';
+      if (cleared >= 3) {
+        text = 'Incrível!!!';
+        speech.textContent = 'INCRÍVEL!!!';
+      } else if (cleared === 2) {
+        text = 'Muito boa jogada!';
+        speech.textContent = 'Muito boa jogada!';
+      } else {
+        speech.textContent = 'Boa jogada!';
+      }
+
+      // Som de pop + voz falando
+      playPopSound();
+      speak(text);
+
+      monster.classList.remove('show');
+      void monster.offsetWidth;
+      monster.classList.add('show');
+
+      setTimeout(() => {
+        monster.classList.remove('show');
+      }, 2000);
+    }
+
+    function clearLines() {
+      const toClear = []; // {r, c}
+
+      // Linhas
+      for (let r = 0; r < SIZE; r++) {
+        if (board[r].every(cell => cell !== null)) {
+          for (let c = 0; c < SIZE; c++) toClear.push({ r, c });
+        }
+      }
+      // Colunas
+      for (let c = 0; c < SIZE; c++) {
+        let full = true;
+        for (let r = 0; r < SIZE; r++) {
+          if (!board[r][c]) { full = false; break; }
+        }
+        if (full) {
+          for (let r = 0; r < SIZE; r++) {
+            if (!toClear.some(p => p.r === r && p.c === c)) {
+              toClear.push({ r, c });
+            }
+          }
+        }
+      }
+
+      if (toClear.length === 0) return 0;
+
+      const clearedLines = Math.ceil(toClear.length / SIZE);
+      isAnimating = true;
+
+      // Aplica classe de brilho + treme o tabuleiro
+      const boardEl = document.getElementById('board');
+      boardEl.classList.remove('clear-shake');
+      void boardEl.offsetWidth;
+      boardEl.classList.add('clear-shake');
+      setTimeout(() => boardEl.classList.remove('clear-shake'), 450);
+
+      const cells = document.querySelectorAll('.cell');
+      toClear.forEach(({ r, c }) => {
+        const idx = r * SIZE + c;
+        cells[idx].classList.add('clearing');
+      });
+
+      // Depois da animação, limpa de verdade
+      setTimeout(() => {
+        toClear.forEach(({ r, c }) => {
+          board[r][c] = null;
+        });
+        drawBoard();
+
+        // Pontos + Moedas
+        const points = toClear.length * 5 * level + (clearedLines > 1 ? clearedLines * 20 * level : 0);
+        score += points;
+        roundScore += points;
+        coins += Math.max(1, Math.floor(toClear.length / 2) + clearedLines);
+        updateInfo();
+
+        showGoodMessage(clearedLines);
+
+        // Pausa: monstrinho parabeniza (~2.2s), depois verifica rodada/fase
+        setTimeout(() => {
+          const advanced = checkRoundProgress();
+          if (!advanced) {
+            isAnimating = false;
+          }
+        }, 2200);
+      }, 520);
+
+      return clearedLines;
+    }
+
+    function updateInfo() {
+      document.getElementById('level').textContent = `Fase: ${level}`;
+      document.getElementById('round').textContent = `Rodada: ${round}/3`;
+      document.getElementById('score').textContent = `Pontos: ${score}`;
+      document.getElementById('coins').textContent = `🪙 ${coins}`;
+      document.getElementById('next').textContent = `Rodada: ${roundScore}/${pointsForNextRound()}`;
+    }
+
+    function applyTheme(themeId) {
+      currentTheme = themeId;
+      document.body.className = themeId === 'normal' ? '' : `theme-${themeId}`;
+      // Atualiza também as peças da lateral
+      renderPieces();
+      drawBoard();
+    }
+
+    function openShop() {
+      const modal = document.getElementById('shop-modal');
+      const itemsEl = document.getElementById('shop-items');
+      document.getElementById('shop-coins-display').textContent = `Suas moedas: 🪙 ${coins}`;
+      itemsEl.innerHTML = '';
+
+      THEMES.forEach(theme => {
+        const owned = ownedThemes.includes(theme.id);
+        const active = currentTheme === theme.id;
+        const item = document.createElement('div');
+        item.className = 'shop-item' + (owned ? ' owned' : '') + (active ? ' active' : '');
+
+        item.innerHTML = `
+          <div class="shop-preview">${theme.preview}</div>
+          <div class="shop-info">
+            <div class="name">${theme.name}</div>
+            <div class="desc">${theme.desc}</div>
+          </div>
+          <button class="shop-buy ${owned ? 'owned-btn' : ''}" 
+            ${owned && active ? 'disabled' : ''}>
+            ${active ? 'Em uso' : owned ? 'Usar' : `🪙 ${theme.price}`}
+          </button>
+        `;
+
+        const btn = item.querySelector('.shop-buy');
+        btn.onclick = () => {
+          if (owned) {
+            applyTheme(theme.id);
+            openShop(); // refresh
+          } else if (coins >= theme.price) {
+            coins -= theme.price;
+            ownedThemes.push(theme.id);
+            applyTheme(theme.id);
+            updateInfo();
+            playPopSound();
+            speak(theme.name + ' desbloqueado!');
+            openShop();
+          } else {
+            speak('Moedas insuficientes!');
+          }
+        };
+        itemsEl.appendChild(item);
+      });
+
+      modal.classList.add('show');
+    }
+
+    function closeShop() {
+      document.getElementById('shop-modal').classList.remove('show');
+    }
+
+    // ===== ROLETA =====
+    // Prêmios (sentido horário a partir do topo / ponteiro)
+    const ROULETTE_PRIZES = [10, 5, 25, 0, 15, 50, 3, 100]; // 8 fatias
+    let rouletteSpinning = false;
+    let rouletteRotation = 0;
+
+    function openRoulette() {
+      const wheel = document.getElementById('roulette-wheel');
+      // Remove labels antigas e coloca ?
+      wheel.querySelectorAll('.roulette-label').forEach(el => el.remove());
+      for (let i = 0; i < 8; i++) {
+        const label = document.createElement('div');
+        label.className = 'roulette-label';
+        label.textContent = '?';
+        // centro de cada fatia (22.5°, 67.5°, ...) — raio ~70px
+        const angle = (i * 45 + 22.5) * Math.PI / 180;
+        const r = 70;
+        label.style.transform = `translate(${Math.sin(angle) * r}px, ${-Math.cos(angle) * r}px)`;
+        wheel.appendChild(label);
+      }
+      document.getElementById('roulette-result').textContent = '';
+      document.getElementById('roulette-spin-btn').disabled = false;
+      document.getElementById('roulette-modal').classList.add('show');
+    }
+
+    function closeRoulette() {
+      if (rouletteSpinning) return;
+      document.getElementById('roulette-modal').classList.remove('show');
+    }
+
+    function spinRoulette() {
+      if (rouletteSpinning) return;
+      if (coins < 5) {
+        document.getElementById('roulette-result').textContent = '❌ Precisa de 🪙 5!';
+        speak('Moedas insuficientes!');
+        return;
+      }
+
+      coins -= 5;
+      updateInfo();
+      rouletteSpinning = true;
+      document.getElementById('roulette-spin-btn').disabled = true;
+      document.getElementById('roulette-result').textContent = 'Girando...';
+
+      // Sons de giro (cliques que desaceleram)
+      playRouletteSpinSound();
+
+      const slice = Math.floor(Math.random() * 8);
+      const prize = ROULETTE_PRIZES[slice];
+      const extraSpins = 5 + Math.floor(Math.random() * 3);
+      const targetAngle = extraSpins * 360 + (360 - slice * 45 - 22.5);
+      rouletteRotation += targetAngle;
+      document.getElementById('roulette-wheel').style.transform = `rotate(${rouletteRotation}deg)`;
+
+      setTimeout(() => {
+        rouletteSpinning = false;
+        document.getElementById('roulette-spin-btn').disabled = false;
+        playRouletteStopSound();
+        if (prize > 0) {
+          coins += prize;
+          updateInfo();
+          document.getElementById('roulette-result').textContent = `🎉 Ganhou 🪙 ${prize}!`;
+          setTimeout(() => playPopSound(), 150);
+          speak('Ganhou ' + prize + ' moedas!');
+        } else {
+          document.getElementById('roulette-result').textContent = '😅 Não foi dessa vez...';
+          speak('Não foi dessa vez');
+        }
+      }, 4200);
+    }
+
+    function playRouletteSpinSound() {}
+    function playRouletteStopSound() {}
+
+    function showLevelOverlay() {
+      const overlay = document.getElementById('level-overlay');
+      document.getElementById('overlay-title').textContent = `Fase ${level}!`;
+      document.getElementById('overlay-text').textContent = level <= 2
+        ? 'Já está ficando difícil!'
+        : level <= 3
+          ? 'Só peças difíceis agora!'
+          : level <= 5
+            ? 'Modo HARD ativado!'
+            : 'MODO EXPERT! Boa sorte!';
+      overlay.classList.add('show');
+      setTimeout(() => {
+        overlay.classList.remove('show');
+      }, 2000);
+    }
+
+    function checkRoundProgress() {
+      const needed = pointsForNextRound();
+      if (roundScore < needed) return false;
+
+      // Completou a rodada
+      if (round < 3) {
+        // Avança para a próxima rodada (mesma fase)
+        round++;
+        roundScore = 0;
+        updateInfo();
+
+        playLevelUpSound();
+        speak('Rodada ' + round + '!');
+        const msg = document.getElementById('message');
+        msg.textContent = `🎯 Rodada ${round}/3!`;
+        msg.className = 'levelup';
+
+        setTimeout(() => {
+          if (msg.className === 'levelup') {
+            msg.textContent = '';
+            msg.className = '';
+          }
+          isAnimating = false;
+        }, 1800);
+
+        return true;
+      }
+
+      // Completou as 3 rodadas → próxima FASE
+      level++;
+      round = 1;
+      roundScore = 0;
+
+      board = Array(SIZE).fill().map(() => Array(SIZE).fill(null));
+      drawBoard();
+      currentPieces = [randomPiece(), randomPiece(), randomPiece()];
+      selectedPiece = null;
+      selectedIndex = -1;
+      renderPieces();
+      updateInfo();
+
+      playLevelUpSound();
+      speak('Passou de fase!');
+      const msg = document.getElementById('message');
+      msg.textContent = `🎉 Fase ${level}!`;
+      msg.className = 'levelup';
+      showLevelOverlay();
+
+      setTimeout(() => {
+        if (msg.className === 'levelup') {
+          msg.textContent = '';
+          msg.className = '';
+        }
+        isAnimating = false;
+      }, 2200);
+
+      return true;
+    }
+
+    function tryPlace(row, col) {
+      if (isAnimating) return;
+      if (!selectedPiece) {
+        const msg = document.getElementById('message');
+        msg.textContent = 'Selecione uma peça primeiro!';
+        msg.className = 'bad';
+        setTimeout(() => {
+          if (msg.textContent === 'Selecione uma peça primeiro!') {
+            msg.textContent = '';
+            msg.className = '';
+          }
+        }, 1400);
+        return;
+      }
+
+      const { shape, color } = selectedPiece;
+
+      if (canPlace(shape, row, col)) {
+        place(shape, color, row, col);
+        drawBoard();
+        playPlaceSound();
+
+        // Nova peça
+        currentPieces[selectedIndex] = randomPiece();
+        selectedPiece = null;
+        selectedIndex = -1;
+        renderPieces();
+
+        // Limpa linhas (com animação)
+        const cleared = clearLines();
+
+        // Se não limpou nada, só verifica game over depois
+        if (cleared === 0) {
+          if (!hasPossibleMove()) {
+            playGameOverSound();
+            speak('Fim de jogo!');
+            const msg = document.getElementById('message');
+            msg.textContent = `Fim de jogo! Você chegou na Fase ${level}`;
+            msg.className = 'bad';
+          }
+        }
+      } else {
+        const msg = document.getElementById('message');
+        msg.textContent = 'Não cabe aqui!';
+        msg.className = 'bad';
+        setTimeout(() => {
+          if (msg.textContent === 'Não cabe aqui!') {
+            msg.textContent = '';
+            msg.className = '';
+          }
+        }, 900);
+      }
+    }
+
+    function preview(row, col) {
+      if (isAnimating) return;
+      clearPreview();
+      if (!selectedPiece) return;
+      const { shape, color } = selectedPiece;
+      const valid = canPlace(shape, row, col);
+      const cells = document.querySelectorAll('.cell');
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[0].length; c++) {
+          if (shape[r][c]) {
+            const nr = row + r;
+            const nc = col + c;
+            if (nr < SIZE && nc < SIZE && nr >= 0 && nc >= 0) {
+              const idx = nr * SIZE + nc;
+              if (valid) {
+                cells[idx].classList.add(color);
+                cells[idx].style.opacity = '0.7';
+              } else {
+                cells[idx].style.background = 'rgba(255,80,80,0.5)';
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function clearPreview() {
+      if (isAnimating) return;
+      drawBoard();
+    }
+
+    function hasPossibleMove() {
+      for (const piece of currentPieces) {
+        if (!piece) continue;
+        for (let r = 0; r < SIZE; r++) {
+          for (let c = 0; c < SIZE; c++) {
+            if (canPlace(piece.shape, r, c)) return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function resetGame() {
+      board = Array(SIZE).fill().map(() => Array(SIZE).fill(null));
+      score = 0;
+      coins = 0;
+      level = 1;
+      round = 1;
+      roundScore = 0;
+      selectedPiece = null;
+      selectedIndex = -1;
+      isAnimating = false;
+      currentTheme = 'normal';
+      ownedThemes = ['normal'];
+      document.body.className = '';
+      currentPieces = [randomPiece(), randomPiece(), randomPiece()];
+      document.getElementById('message').textContent = '';
+      document.getElementById('message').className = '';
+      document.getElementById('level-overlay').classList.remove('show');
+      document.getElementById('monster').classList.remove('show');
+      document.getElementById('shop-modal').classList.remove('show');
+      updateInfo();
+      createBoard();
+      drawBoard();
+      renderPieces();
+    }
+
+    let tutTimers = [];
+    let tutBarTimer = null;
+    const TUT_DURATION = 15000;
+
+    function tutClearTimers() {
+      tutTimers.forEach(t => clearTimeout(t));
+      tutTimers = [];
+      clearInterval(tutBarTimer);
+    }
+
+    function tutLater(fn, ms) {
+      const id = setTimeout(fn, ms);
+      tutTimers.push(id);
+      return id;
+    }
+
+    function tutSparks(x, y, color) {
+      const demo = document.getElementById('tut-demo');
+      for (let i = 0; i < 8; i++) {
+        const s = document.createElement('div');
+        s.className = 'tut-spark';
+        const angle = (i / 8) * Math.PI * 2;
+        const dist = 30 + Math.random() * 40;
+        s.style.left = x + 'px';
+        s.style.top = y + 'px';
+        s.style.background = color || '#ffeb3b';
+        s.style.setProperty('--sx', Math.cos(angle) * dist + 'px');
+        s.style.setProperty('--sy', Math.sin(angle) * dist + 'px');
+        demo.appendChild(s);
+        setTimeout(() => s.remove(), 700);
+      }
+    }
+
+    function tutClickHand() {
+      const hand = document.getElementById('tut-hand');
+      hand.classList.remove('click');
+      void hand.offsetWidth;
+      hand.classList.add('click');
+    }
+
+    function startTutorial() {
+      document.getElementById('cover').classList.add('hide');
+      document.getElementById('tutorial').classList.add('show');
+      tutClearTimers();
+
+      const boardEl = document.getElementById('tut-board');
+      boardEl.innerHTML = '';
+      boardEl.classList.remove('shake');
+      for (let i = 0; i < 36; i++) {
+        const c = document.createElement('div');
+        c.className = 'tut-cell';
+        c.id = 'tc' + i;
+        boardEl.appendChild(c);
+      }
+
+      const piecesEl = document.getElementById('tut-pieces');
+      piecesEl.innerHTML = `
+        <div class="tut-piece" id="tp0">
+          <div class="tp" style="grid-template-columns:repeat(2,22px)">
+            <div class="yellow"></div><div class="yellow"></div>
+            <div class="yellow"></div><div class="yellow"></div>
+          </div>
+        </div>
+        <div class="tut-piece" id="tp1">
+          <div class="tp" style="grid-template-columns:repeat(3,22px)">
+            <div class="blue"></div><div class="blue"></div><div class="blue"></div>
+          </div>
+        </div>
+        <div class="tut-piece" id="tp2">
+          <div class="tp" style="grid-template-columns:repeat(1,22px)">
+            <div class="red"></div>
+          </div>
+        </div>
+      `;
+
+      const hand = document.getElementById('tut-hand');
+      const label = document.getElementById('tut-label');
+      const bat = document.getElementById('tut-bat');
+      const scorePop = document.getElementById('tut-score-pop');
+      bat.classList.remove('show');
+      scorePop.classList.remove('show');
+      hand.style.left = '72%';
+      hand.style.top = '35%';
+
+      // Reinicia animação do demo
+      const demo = document.getElementById('tut-demo');
+      demo.style.animation = 'none';
+      void demo.offsetWidth;
+      demo.style.animation = '';
+
+      // Faíscas iniciais
+      tutLater(() => tutSparks(120, 80, '#ffeb3b'), 200);
+      tutLater(() => tutSparks(180, 100, '#448aff'), 400);
+      tutLater(() => tutSparks(100, 120, '#ff5252'), 600);
+
+      const bar = document.getElementById('tut-bar');
+      bar.style.width = '0%';
+      const start = Date.now();
+      tutBarTimer = setInterval(() => {
+        const pct = Math.min(100, ((Date.now() - start) / TUT_DURATION) * 100);
+        bar.style.width = pct + '%';
+        if (pct >= 100) clearInterval(tutBarTimer);
+      }, 40);
+
+      // 1) Mão vai até peça amarela e clica
+      label.textContent = '👆 Escolhendo uma peça...';
+      speak('Escolha uma peça');
+      tutLater(() => {
+        hand.style.left = '82%';
+        hand.style.top = '22%';
+      }, 600);
+      tutLater(() => {
+        tutClickHand();
+        document.getElementById('tp0').classList.add('selected');
+        playPopSound();
+      }, 1100);
+
+      // 2) Mão vai ao tabuleiro e coloca 2x2 (bloco a bloco com pop)
+      tutLater(() => {
+        label.textContent = '🧩 Colocando no tabuleiro...';
+        hand.style.left = '28%';
+        hand.style.top = '38%';
+      }, 1800);
+      tutLater(() => {
+        tutClickHand();
+        playPlaceSound();
+        const ids = ['tc0','tc1','tc6','tc7'];
+        ids.forEach((id, i) => {
+          tutLater(() => {
+            document.getElementById(id).className = 'tut-cell filled yellow';
+          }, i * 80);
+        });
+        document.getElementById('tp0').classList.remove('selected');
+        document.getElementById('tp0').style.opacity = '0.25';
+        tutSparks(80, 60, '#ffeb3b');
+      }, 2400);
+
+      // 3) Seleciona azul
+      tutLater(() => {
+        label.textContent = '✨ Mais uma peça!';
+        hand.style.left = '82%';
+        hand.style.top = '42%';
+      }, 3400);
+      tutLater(() => {
+        tutClickHand();
+        document.getElementById('tp1').classList.add('selected');
+        playPopSound();
+      }, 3900);
+
+      // 4) Coloca linha azul
+      tutLater(() => {
+        hand.style.left = '42%';
+        hand.style.top = '38%';
+      }, 4500);
+      tutLater(() => {
+        tutClickHand();
+        playPlaceSound();
+        ['tc2','tc3','tc4'].forEach((id, i) => {
+          tutLater(() => {
+            document.getElementById(id).className = 'tut-cell filled blue';
+          }, i * 90);
+        });
+        document.getElementById('tp1').classList.remove('selected');
+        document.getElementById('tp1').style.opacity = '0.25';
+        tutSparks(140, 50, '#448aff');
+      }, 5100);
+
+      // 5) Seleciona vermelho
+      tutLater(() => {
+        label.textContent = '🔥 Completando a fileira...';
+        hand.style.left = '82%';
+        hand.style.top = '62%';
+      }, 6000);
+      tutLater(() => {
+        tutClickHand();
+        document.getElementById('tp2').classList.add('selected');
+        playPopSound();
+      }, 6500);
+
+      // 6) Coloca vermelho e completa
+      tutLater(() => {
+        hand.style.left = '55%';
+        hand.style.top = '36%';
+      }, 7100);
+      tutLater(() => {
+        tutClickHand();
+        playPlaceSound();
+        // Último bloco completa a fileira de cima (tc0..tc5)
+        document.getElementById('tc5').className = 'tut-cell filled red';
+        document.getElementById('tp2').classList.remove('selected');
+        document.getElementById('tp2').style.opacity = '0.25';
+        tutSparks(180, 45, '#ff5252');
+      }, 7700);
+
+      // 7) Fileira explode!
+      tutLater(() => {
+        label.textContent = '💥 FILEIRA COMPLETA!';
+        boardEl.classList.add('shake');
+        for (let i = 0; i < 6; i++) {
+          document.getElementById('tc' + i).classList.add('clearing');
+        }
+        tutSparks(100, 40, '#fff');
+        tutSparks(160, 50, '#ffeb3b');
+        playClearSound();
+        showBoaFlash(1);
+        playLevelUpSound();
+      }, 8400);
+      tutLater(() => {
+        for (let i = 0; i < 6; i++) {
+          document.getElementById('tc' + i).className = 'tut-cell';
+        }
+        boardEl.classList.remove('shake');
+        // score pop
+        scorePop.textContent = '+50 ⭐';
+        scorePop.style.left = '30%';
+        scorePop.style.top = '20%';
+        scorePop.classList.remove('show');
+        void scorePop.offsetWidth;
+        scorePop.classList.add('show');
+      }, 9000);
+
+      // 8) Tigre grandioso
+      tutLater(() => {
+        label.textContent = '🐯 Boa jogada!!!';
+        bat.classList.add('show');
+        playPopSound();
+        speak('Boa jogada!');
+        tutSparks(120, 100, '#e040fb');
+      }, 9600);
+
+      // 9) Sua vez
+      tutLater(() => {
+        label.textContent = '🎮 Agora é a SUA vez!';
+        speak('Agora é a sua vez!');
+        hand.style.left = '45%';
+        hand.style.top = '55%';
+      }, 12500);
+      tutLater(() => {
+        skipTutorial();
+      }, TUT_DURATION);
+    }
+
+    function skipTutorial() {
+      tutClearTimers();
+      window.speechSynthesis && window.speechSynthesis.cancel();
+      document.getElementById('tutorial').classList.remove('show');
+      startGame();
+    }
+
+    function startGame() {
+      document.getElementById('cover').classList.add('hide');
+      document.getElementById('tutorial').classList.remove('show');
+      document.getElementById('game-ui').classList.add('show');
+      document.getElementById('game-title').textContent = 'Block Puzzle Colorido';
+
+      score = 0;
+      level = 1;
+      round = 1;
+      roundScore = 0;
+      selectedPiece = null;
+      selectedIndex = -1;
+      isAnimating = false;
+      currentPieces = [randomPiece(), randomPiece(), randomPiece()];
+      board = Array(SIZE).fill().map(() => Array(SIZE).fill(null));
+
+      createBoard();
+      drawBoard();
+      renderPieces();
+      updateInfo();
+      playPopSound();
+    }
+
+    function backToCover() {
+      tutClearTimers();
+      document.getElementById('game-ui').classList.remove('show');
+      document.getElementById('tutorial').classList.remove('show');
+      document.getElementById('cover').classList.remove('hide');
+      document.getElementById('shop-modal').classList.remove('show');
+      document.getElementById('roulette-modal').classList.remove('show');
+      document.getElementById('monster').classList.remove('show');
+      document.getElementById('level-overlay').classList.remove('show');
+      document.getElementById('boa-flash').classList.remove('show');
+    }
+
+    // Partículas da capa
+    (function initCoverAnim() {
+      const colors = [
+        'linear-gradient(145deg,#ffeb3b,#fbc02d)',
+        'linear-gradient(145deg,#ff5252,#d32f2f)',
+        'linear-gradient(145deg,#448aff,#1565c0)',
+        'linear-gradient(145deg,#69f0ae,#00c853)',
+        'linear-gradient(145deg,#e040fb,#9c27b0)',
+        'linear-gradient(145deg,#ffab40,#f57c00)'
+      ];
+      const container = document.getElementById('cover-particles');
+      for (let i = 0; i < 18; i++) {
+        const p = document.createElement('div');
+        p.className = 'cover-particle';
+        const size = 12 + Math.random() * 22;
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.background = colors[i % colors.length];
+        p.style.animationDuration = (6 + Math.random() * 8) + 's';
+        p.style.animationDelay = (Math.random() * 6) + 's';
+        container.appendChild(p);
+      }
+      // Depois da entrada, blocos ficam flutuando
+      setTimeout(() => {
+        document.querySelectorAll('#cover-blocks span').forEach((s, i) => {
+          s.classList.add('loop');
+          s.style.animationDelay = (i * 0.15) + 's';
+        });
+      }, 1800);
+    })();
+  </script>
+</body>
+</html>
